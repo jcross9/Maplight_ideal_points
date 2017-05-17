@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "####################################################################################################\n########################### MAPLIGHT IDEAL POINT SCORES PROJECT SCRIPT #############################\n####################################################################################################\n\n\n############# PROJECT PROGRESS ##################\n\n## Looked at US repo to see if there are action timestamp. Link: \n## Looked at how difficult it would be to create new column of dates from Maplight data (should be straightforward).\n\n\n\n############# DATA MANIPULATION AND CREATION #####################\n\n## Creation of Postition Date Column\n\nlibrary(readr)\n\n\npos114 <- read_csv(\"/Users/alexanderfurnas/Projects/Maplight_ideal_points/114positions.csv\")\n\npos114 <- pos114 %>% mutate(position_date = lubridate::ymd(stringr::str_split(citation, \"[()]\")[[1]][2]))\n\npos114 <- pos114 %>% mutate(bill_id = paste(session, prefix, number, sep = \"_\"))\n\n\nlibrary(lubridate)\n\n\n############# DATA ANALYSIS #################\n\nrequire(\"emIRT\")\n\n",
+    "created" : 1495050152471.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3238398633",
+    "id" : "CEAF8E2F",
+    "lastKnownWriteTime" : 1495052921,
+    "last_content_update" : 1495052921057,
+    "path" : "~/Maplight Ideal Points/Maplight_ideal_points/maplight_script.R",
+    "project_path" : "maplight_script.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
