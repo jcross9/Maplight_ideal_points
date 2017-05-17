@@ -16,10 +16,12 @@ pos114$disposition.dichot <- NA
 pos114$disposition.dichot[pos114$disposition == "oppose"] <- -1
 pos114$disposition.dichot[pos114$disposition == "support"] <- 1
 
-
+est_mat <- NA
 m1 <- matrix(0, nrow = length(unique(pos114$org_index)), ncol = length(unique(pos114$bill_id_index)))
-est_mat <- as.matrix(est_dat2[,2:4])
-m1[est_dat2_mat[,1:2] ]<- as.numeric(est_dat2_mat[,3])
+est_mat <- pos114 %>% dplyr::select(16,15,17)
+est_mat <- est_mat%>% filter(complete.cases(est_mat))
+est_mat <- as.matrix(est_mat)
+m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 print(dim(m1))
 
 
