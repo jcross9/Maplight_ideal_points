@@ -25,7 +25,3 @@ m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 print(dim(m1))
 
 
-m1 <- matrix(0, nrow = length(unique(est_dat2$state_leg_id_index)), ncol = length(unique(est_dat2$state_vote_id_index)))
-est_dat2_mat <- as.matrix(est_dat2[,2:4])
-m1[est_dat2_mat[,1:2] ]<- as.numeric(est_dat2_mat[,3])
-print(dim(m1))
