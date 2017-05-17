@@ -6,7 +6,7 @@
 ############# PROJECT PROGRESS ##################
 
 ## Looked at US repo to see if there are action timestamp. Link: 
-## Looked at how difficult it would be to create new column of dates from Maplight data (should be straightforward).
+## Need to fix the position_date column; all one date at present.
 
 
 
@@ -26,9 +26,9 @@ pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(stringr::str_split(ci
 pos114 <- pos114 %>% mutate(bill_id = paste(session, prefix, number, sep = "_"))
 
 
-
-
 ############# DATA ANALYSIS #################
 
 require("emIRT")
+
+
 
