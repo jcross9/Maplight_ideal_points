@@ -86,23 +86,52 @@ plot(d) # how is this being identified? is the right-side tail indicating a cons
 
 ### ideal (from the Jackman Package)
 
-# with NO imputation of missing data
+## with NO imputation of missing data
 
+# generate estimates
 fit.ideal <- ideal(rc, 
      maxiter = 10000, thin = 100, burnin = 5000,
      impute = FALSE,
      normalize = TRUE,
      priors = NULL, startvals = "eigen",
-     store.item = FALSE, file = NULL,
+     store.item = TRUE, file = NULL,
      verbose=FALSE)
 
+# plot results
 hist(fit.ideal$xbar) # looks pretty dadgum good
 dens <- density(fit.ideal$xbar)
 plot(dens)
-hist(fit.ideal$betabar) # looks pretty dadgum good
-dens <- density(fit.ideal$xbar)
+
+hist(fit.ideal$betabar[,2]) # also a little less weird
+dens <- density(fit.ideal$betabar[,2]) # perhaps less variance than we'd like
 plot(dens)
 
 
+## WITH imputation of missing data
 
-# WITH imputation of missing data
+# generate estimates
+fit.ideal2 <- ideal(rc, 
+                   maxiter = 10000, thin = 100, burnin = 5000,
+                   impute = TRUE,
+                   normalize = TRUE,
+                   priors = NULL, startvals = "eigen",
+                   store.item = TRUE, file = NULL,
+                   verbose=FALSE)
+
+# plot results
+hist(fit.ideal2$xbar) # unsurprisingly a bit smoother
+dens <- density(fit.ideal2$xbar)
+plot(dens)
+
+hist(fit.ideal2$betabar[,2]) # also a little less weird
+dens <- density(fit.ideal2$betabar[,2]) # perhaps less variance than we'd like
+plot(dens)
+
+#write.csv(fit.ideal$xbar, "initial_group_scores.csv")
+#write.csv(fit.ideal$betabar, "intial_bill_scores.csv")
+
+
+### Restricting the data to groups who rate more than x bills
+
+head(rc)
+head(fit.ideal)
