@@ -32,7 +32,7 @@ library(pscl)
 pos114 <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/114positions.csv")
 pos114 <- read_csv("C:/Users/jcros/Documents/Maplight_ideal_points/114positions.csv")
 
-pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(stringr::str_split(citation, "[()]")[[1]][2]))
+pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(sapply(stringr::str_split(pos114$citation, "[()]"),function(x) x[2])))
 
 # Create bill id
 pos114 <- pos114 %>% mutate(bill_id = paste(session, prefix, number, sep = "_"))

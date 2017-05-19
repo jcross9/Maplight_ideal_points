@@ -40,3 +40,6 @@ est_mat <- est_mat%>% filter(complete.cases(est_mat))
 est_mat <- as.matrix(est_mat)
 m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 print(dim(m1))
+
+
+bill_orgcounts <- pos114 %>% group_by(bill_id) %>% summarise(num = n(), posit = sum(disposition.dichot), pos_share = posit/num) %>% arrange(desc(num))
