@@ -149,7 +149,7 @@ fit.ideal2 <- ideal(rc,
                    normalize = TRUE,
                    priors = NULL, startvals = "eigen",
                    store.item = TRUE, file = NULL,
-                   verbose=FALSE)
+                   verbose=TRUE)
 
 # plot results
 hist(fit.ideal2$xbar) # unsurprisingly a bit smoother
@@ -163,6 +163,11 @@ plot(dens)
 #write.csv(fit.ideal$xbar, "initial_group_scores.csv")
 #write.csv(fit.ideal$betabar, "intial_bill_scores.csv")
 
+scatter.smooth(fit.ideal$xbar, fit.ideal2$xbar)
+cor(fit.ideal$xbar, fit.ideal2$xbar)
+
+scatter.smooth(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
+cor(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 
 ### Restricting the data to groups who rate more than x bills
 
