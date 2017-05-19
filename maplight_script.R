@@ -38,27 +38,53 @@ pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(sapply(stringr::str_s
 pos114 <- pos114 %>% mutate(bill_id = paste(session, prefix, number, sep = "_"))
 
 
-# Create index for bill and organization to be used for slotting into the matrix -- this will also crosswalk back to orgname
-pos114 <- pos114 %>% mutate(bill_id_index = as.numeric(as.factor(as.character(bill_id))))
 
-pos114 <- pos114 %>% mutate(org_index = as.numeric(as.factor(as.character(orgname))))
 
 # dichotomize disposition as numeric for vote matrix
 pos114$disposition.dichot <- NA
 pos114$disposition.dichot[pos114$disposition == "oppose"] <- -1
 pos114$disposition.dichot[pos114$disposition == "support"] <- 1
 
+#summarise bills and orgs prior to filtration
+org_poscounts_pre <- pos114 %>% group_by(orgname) %>% summarise(num = n()) %>% arrange(desc(num))
+bill_orgcounts_pre <- pos114 %>% group_by(bill_id) %>% summarise(num = n()) %>% arrange(desc(num))
 
-org_poscounts <- pos114 %>% group_by(orgname) %>% summarise(num = n()) %>% filter( num>4) %>% arrange(desc(num))
+#5-core filter a graph of the connections. 
+#construct the edgelist
+edge_mat <- NA
+edge_mat <- pos114 %>% dplyr::select(orgname,bill_id)
+edge_mat <- edge_mat%>% filter(complete.cases(edge_mat))
+edge_mat <- as.matrix(edge_mat)
 
-bill_orgcounts <- pos114 %>% group_by(bill_id) %>% summarise(num = n()) %>% filter( num>4) %>% arrange(desc(num))
+#kcore filtration
+library(igraph)
+est_g <- graph_from_edgelist(edge_mat, directed = FALSE)
+core <- coreness(est_g)
+V(est_g)$core <- coreness(est_g)
+core5 <- induced_subgraph(est_g,V(est_g)$core>4)
 
+#extract ids of the bills and orgs to keep
+core_names <- V(core5)$name
+
+#filter bills and orgs to the 5 core
+pos114_core <- filter(pos114, bill_id %in% core_names & orgname %in% core_names)
+
+#summarise bills and orgs after the filtration
+org_poscounts_post <- pos114_core %>% group_by(orgname) %>% summarise(num = n()) %>% arrange(desc(num))
+
+bill_orgcounts_post <- pos114_core %>% group_by(bill_id) %>% summarise(num = n()) %>% arrange(desc(num))
+
+# Create index for bill and organization to be used for slotting into the matrix -- this will also crosswalk back to orgname
+#this must be done after filtration so that the matrix dimensions and indeces line up.
+pos114_core  <- pos114_core  %>% mutate(bill_id_index = as.numeric(as.factor(as.character(bill_id))))
+
+pos114_core  <- pos114_core  %>% mutate(org_index = as.numeric(as.factor(as.character(orgname))))
 #fill vote matrix
 est_mat <- NA
-m1 <- matrix(0, nrow = length(unique(pos114$org_index)), ncol = length(unique(pos114$bill_id_index)))
-est_mat <- pos114 %>% dplyr::select(org_index,bill_id_index, disposition.dichot)
+est_mat <- pos114_core %>% dplyr::select(org_index,bill_id_index, disposition.dichot)
 est_mat <- est_mat%>% filter(complete.cases(est_mat))
 est_mat <- as.matrix(est_mat)
+m1 <- matrix(0, nrow = length(unique(pos114_core$org_index)), ncol = length(unique(pos114_core$bill_id_index)))
 m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 print(dim(m1))
 
@@ -102,7 +128,7 @@ fit.ideal <- ideal(rc,
      normalize = TRUE,
      priors = NULL, startvals = "eigen",
      store.item = TRUE, file = NULL,
-     verbose=FALSE)
+     verbose=TRUE)
 
 # plot results
 hist(fit.ideal$xbar) # looks pretty dadgum good

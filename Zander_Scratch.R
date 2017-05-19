@@ -43,3 +43,26 @@ print(dim(m1))
 
 
 bill_orgcounts <- pos114 %>% group_by(bill_id) %>% summarise(num = n(), posit = sum(disposition.dichot), pos_share = posit/num) %>% arrange(desc(num))
+
+
+
+edge_mat <- NA
+edge_mat <- pos114 %>% dplyr::select(orgname,bill_id)
+edge_mat <- edge_mat%>% filter(complete.cases(edge_mat))
+edge_mat <- as.matrix(edge_mat)
+
+#kcore filtration
+library(igraph)
+est_g <- graph_from_edgelist(edge_mat, directed = FALSE)
+core <- coreness(est_g)
+V(est_g)$core <- coreness(est_g)
+core5 <- induced_subgraph(est_g,V(est_g)$core>4)
+
+core_names <- V(core5)$name
+
+pos114_core <- filter(pos114, bill_id %in% core_names & orgname %in% core_names)
+
+org_poscounts <- pos114_core %>% group_by(orgname) %>% summarise(num = n()) %>% arrange(desc(num))
+
+bill_orgcounts <- pos114_core %>% group_by(bill_id) %>% summarise(num = n()) %>% arrange(desc(num))
+
