@@ -37,9 +37,6 @@ pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(sapply(stringr::str_s
 # Create bill id
 pos114 <- pos114 %>% mutate(bill_id = paste(session, prefix, number, sep = "_"))
 
-
-
-
 # dichotomize disposition as numeric for vote matrix
 pos114$disposition.dichot <- NA
 pos114$disposition.dichot[pos114$disposition == "oppose"] <- -1
@@ -75,10 +72,11 @@ org_poscounts_post <- pos114_core %>% group_by(orgname) %>% summarise(num = n())
 bill_orgcounts_post <- pos114_core %>% group_by(bill_id) %>% summarise(num = n()) %>% arrange(desc(num))
 
 # Create index for bill and organization to be used for slotting into the matrix -- this will also crosswalk back to orgname
-#this must be done after filtration so that the matrix dimensions and indeces line up.
+#this must be done after filtration so that the matrix dimensions and indices line up.
 pos114_core  <- pos114_core  %>% mutate(bill_id_index = as.numeric(as.factor(as.character(bill_id))))
 
 pos114_core  <- pos114_core  %>% mutate(org_index = as.numeric(as.factor(as.character(orgname))))
+
 #fill vote matrix
 est_mat <- NA
 est_mat <- pos114_core %>% dplyr::select(org_index,bill_id_index, disposition.dichot)
@@ -162,6 +160,10 @@ plot(dens)
 
 #write.csv(fit.ideal$xbar, "initial_group_scores.csv")
 #write.csv(fit.ideal$betabar, "intial_bill_scores.csv")
+#write.csv(fit.ideal$xbar, "initial_group_scores_trunc_noimpute.csv")
+#write.csv(fit.ideal$betabar, "intial_bill_scores_trunc_noimpute.csv")
+#write.csv(fit.ideal2$xbar, "initial_group_scores_trunc_impute.csv")
+#write.csv(fit.ideal2$betabar, "intial_bill_scores_trunc_impute.csv")
 
 scatter.smooth(fit.ideal$xbar, fit.ideal2$xbar)
 cor(fit.ideal$xbar, fit.ideal2$xbar)
@@ -169,7 +171,4 @@ cor(fit.ideal$xbar, fit.ideal2$xbar)
 scatter.smooth(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 cor(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 
-### Restricting the data to groups who rate more than x bills
 
-head(rc)
-head(fit.ideal)
