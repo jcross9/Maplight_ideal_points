@@ -86,7 +86,7 @@ m1 <- matrix(0, nrow = length(unique(pos114_core$org_index)), ncol = length(uniq
 m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 print(dim(m1))
 
-
+fix(m1)
 # create roll call object that the estimation process takes
 rc<-rollcall(m1,yea=1,nay=-1,missing=0)
 rm(m1)
@@ -176,9 +176,9 @@ cor(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 #### Merge Scores back to Data ####
 
 #Groups
-groups <- subset(pos114_core, !duplicated(X1)) #Is X1 the appropriate column?
-groups <- data.frame(cbind(groups$X1,groups$orgname))
-names(groups) <- c("X1","orgame")
+groups <- subset(pos114_core, !duplicated(org_index)) #Is X1 the appropriate column?
+groups <- data.frame(cbind(groups$org_index,groups$orgname))
+names(groups) <- c("org_index","orgame")
 
 no_impute <- read.csv("initial_group_scores_trunc_noimpute.csv")
 no_impute$index <- c(1:nrow(no_impute))
@@ -186,7 +186,7 @@ imputed <- read.csv("initial_group_scores_trunc_impute.csv")
 imputed$index <- c(1:nrow(imputed))
 scores <- merge(no_impute, imputed, by = "index")
 
-group_scores <- merge(scores, groups, by.x = "index", by.y = "X1")
+group_scores <- merge(scores, groups, by.x = "index", by.y = "org_index")
 names(group_scores) <- c("index", "Legislator.x", "non_impute_score", "Legislator.y","imputed_score", "orgname")
 
 #write.csv(group_scores, "merged_group_scores_0522.csv")
