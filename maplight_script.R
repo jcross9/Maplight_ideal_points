@@ -172,3 +172,23 @@ scatter.smooth(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 cor(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 
 
+
+#### Merge Scores back to Data ####
+
+#Groups
+groups <- subset(pos114_core, !duplicated(X1)) #Is X1 the appropriate column?
+groups <- data.frame(cbind(groups$X1,groups$orgname))
+names(groups) <- c("X1","orgame")
+
+no_impute <- read.csv("initial_group_scores_trunc_noimpute.csv")
+no_impute$index <- c(1:nrow(no_impute))
+imputed <- read.csv("initial_group_scores_trunc_impute.csv")
+imputed$index <- c(1:nrow(imputed))
+scores <- merge(no_impute, imputed, by = "index")
+
+group_scores <- merge(scores, groups, by.x = "index", by.y = "X1")
+names(group_scores) <- c("index", "Legislator.x", "non_impute_score", "Legislator.y","imputed_score", "orgname")
+
+#write.csv(group_scores, "merged_group_scores_0522.csv")
+
+
