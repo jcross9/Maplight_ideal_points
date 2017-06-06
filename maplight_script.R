@@ -2,7 +2,6 @@
 ########################### MAPLIGHT IDEAL POINT SCORES PROJECT SCRIPT #############################
 ####################################################################################################
 
-
 ############# PROJECT PROGRESS ##################
 
 ## Looked at US repo to see if there are action timestamp. Link: 
@@ -132,8 +131,15 @@ fit.ideal <- ideal(rc,
 hist(fit.ideal$xbar) # looks pretty dadgum good
 dens <- density(fit.ideal$xbar)
 plot(dens)
+p <- ggplot(fit.ideal, aes(x=non_impute_score)) + 
+  geom_histogram(aes(y=..density..), alpha=.5) +    # Histogram with density instead of count on y-axis
+  geom_density(size=1) + theme_minimal() + geom_vline(xintercept=-2.549188445, colour="darkred") + geom_vline(xintercept=-1.987692622, colour="darkred") +
+  geom_vline(xintercept=-0.191795856, colour="darkred") + geom_vline(xintercept=1.001293099, colour="darkred") + geom_vline(xintercept=2.175257882, colour="darkred")
+p
 
-hist(fit.ideal$betabar[,2]) # also a little less weird
+# Overlay with transparent density 
+
+plothist(fit.ideal$betabar[,2]) # also a little less weird
 dens <- density(fit.ideal$betabar[,2]) # perhaps less variance than we'd like
 plot(dens)
 
@@ -171,7 +177,14 @@ cor(fit.ideal$xbar, fit.ideal2$xbar)
 scatter.smooth(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 cor(fit.ideal$betabar[,2], fit.ideal2$betabar[,2])
 
-
+#other diagnostics
+plot.ideal(fit.ideal)
+plot.ideal(fit.ideal,, type="votes")
+plot.ideal(fit.ideal2)
+plot(predict(fit.ideal))
+plot(predict(fit.ideal), type="votes")
+plot(predict(fit.ideal2))
+plot(predict(fit.ideal2), type="votes")
 
 #### Merge Scores back to Data ####
 
@@ -191,4 +204,19 @@ names(group_scores) <- c("index", "Legislator.x", "non_impute_score", "Legislato
 
 #write.csv(group_scores, "merged_group_scores_0522.csv")
 
+#Bills
+bills <- subset(pos114_core, !duplicated(bill_id_index)) 
+bills <- data.frame(cbind(bills$bill_id_index,bills$bill_id, bills$topic))
+names(bills) <- c("bill_id_index","bill_id","title")
 
+no_impute <- read.csv("intial_bill_scores_trunc_noimpute.csv")
+no_impute$index <- c(1:nrow(no_impute))
+imputed <- read.csv("intial_bill_scores_trunc_impute.csv")
+imputed$index <- c(1:nrow(imputed))
+scores <- merge(no_impute, imputed, by = "index")
+
+bill_scores <- merge(scores, bills, by.x = "index", by.y = "bill_id_index")
+names(bill_scores) <- c("index",	"Bill.x",	"non_impute_discrim",	"non_imputed_diff",	"Bill.y",	"imputed_discrim",	"imputed_diff",	"bill_id",	"title")
+
+
+#write.csv(bill_scores, "merged_bill_scores_0522.csv")
