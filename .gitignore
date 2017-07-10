@@ -24,6 +24,7 @@ __pycache__/
 #data files
 *.mm
 *.csv
+*.json
 
 # C extensions
 *.so

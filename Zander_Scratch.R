@@ -4,8 +4,7 @@ library(lubridate)
 
 pos114 <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/114positions.csv")
 
-pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(unlist(stringr::str_split(citation, "[()]")[2])))
-
+pos114 <- pos114 %>% mutate(position_date = lubridate::ymd(sapply(stringr::str_split(pos114$citation, "[()]"),function(x) x[2])))
 pos114 <- pos114 %>% mutate(bill_id = paste(session, prefix, number, sep = "_"))
 
 pos114 <- pos114 %>% mutate(bill_id_index = as.numeric(as.factor(as.character(bill_id))))
@@ -15,6 +14,16 @@ pos114 <- pos114 %>% mutate(org_index = as.numeric(as.factor(as.character(orgnam
 pos114$disposition.dichot <- NA
 pos114$disposition.dichot[pos114$disposition == "oppose"] <- - 1
 pos114$disposition.dichot[pos114$disposition == "support"] <- 1
+
+
+bills <- group_by(pos114, bill_id) %>% summarise(min_date = min(position_date))
+
+pos114 <- left_join(pos114, bills)
+
+pos114 <- mutate(pos114, time_to_pos = position_date - min_date)
+
+library(ggplot2)
+ggplot(pos114, aes(x=time_to_pos, group = disposition, color=disposition)) + geom_density()
 
 org_poscounts <- pos114 %>% group_by(orgname) %>% summarise(num = n()) %>% filter( num>4) %>% arrange(desc(num))
 
