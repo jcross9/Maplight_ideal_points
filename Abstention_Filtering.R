@@ -44,7 +44,7 @@ core5 <- induced_subgraph(est_g,V(est_g)$core>4)
 core_names <- V(core5)$name
 
 #filter bills and orgs to the 5 core
-pos_all_core <- filter(pos_all, BillID %in% core_names & orgname %in% core_names3)
+pos_all_core <- filter(pos_all, BillID %in% core_names & orgname %in% core_names)
 
 #summarise bills and orgs after the filtration
 org_poscounts_post <- pos_all_core %>% group_by(orgname) %>% summarise(num = n()) %>% arrange(desc(num))
@@ -69,6 +69,13 @@ pos_all_core_dat$disposition[is.na(pos_all_core_dat$disposition) & !is.na(pos_al
 pos_all_core_abst <- filter(pos_all_core_dat, !is.na(disposition))
 
 pos_all_core_abst
+
+
+
+
+
+
+
 write_csv(pos_all_core_abst, "/Users/alexanderfurnas/Projects/Maplight_ideal_points/all_positions_withabstention.csv")
 
 
