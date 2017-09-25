@@ -46,6 +46,7 @@ core_names <- V(core5)$name
 #filter bills and orgs to the 5 core
 pos_all_core <- filter(pos_all, BillID %in% core_names & orgname %in% core_names)
 
+
 #summarise bills and orgs after the filtration
 org_poscounts_post <- pos_all_core %>% group_by(orgname) %>% summarise(num = n()) %>% arrange(desc(num))
 
@@ -70,13 +71,43 @@ pos_all_core_abst <- filter(pos_all_core_dat, !is.na(disposition))
 
 pos_all_core_abst
 
+rollcalls <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/Bill_Data/HSall_rollcalls.csv")
+
+votes <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/Bill_Data/HSall_votes.csv")
+
+rollcalls <- filter(rollcalls, congress > 108)
+votes <- filter(votes, congress > 108)
+
+rollcalls$bill_type <- gsub("[0-9]", "", rollcalls$bill_number) 
+rollcalls$bill_num <- gsub("[^0-9]", "", rollcalls$bill_number)
+rollcalls$BillID <- paste(rollcalls$congress, rollcalls$bill_type, rollcalls$bill_num, sep ="-")
+rollcalls <- dplyr::select(rollcalls, congress, chamber, rollnumber, BillID)
+
+votes <- votes %>% left_join(rollcalls)
+
+votes <- votes %>% select(BillID, icpsr, cast_code)
+votes <-  filter(votes, BillID %in% core_names) 
+votes$disposition[votes$cast_code == 1] <- "support"
+votes$disposition[votes$cast_code == 6] <- "oppose"
+votes$disposition[votes$cast_code == 7 | votes$cast_code == 9] <- "abstention"
+
+bill_major <- pos_all %>% dplyr::select(BillID, Major) %>% unique()
+votes <- votes %>% left_join(bill_major)
+
+MOC_catcounts <- votes %>% group_by(icpsr, Major) %>% summarise(bill_count = n()) %>% arrange(desc(bill_count))
+MOC_catcounts <- MOC_catcounts %>% filter(bill_count > 1, !is.na(Major))
 
 
+votes <- votes %>% left_join(MOC_catcounts)
+votes_abst <- filter(votes, !is.na(bill_count))
+
+votes_abst <- votes_abst %>% select(-cast_code) %>% rename(orgname=icpsr)
+votes_abst$orgname <- as.character(votes_abst$orgname)
+
+final_positions_edgelist <- bind_rows(pos_all_core_abst,votes_abst) 
 
 
-
-
-write_csv(pos_all_core_abst, "/Users/alexanderfurnas/Projects/Maplight_ideal_points/all_positions_withabstention.csv")
+write_csv(final_positions_edgelist, "/Users/alexanderfurnas/Projects/Maplight_ideal_points/all_positions_withabstention_andCong.csv")
 
 
 
