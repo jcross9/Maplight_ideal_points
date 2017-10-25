@@ -1,21 +1,29 @@
 ##
-## Update by Zander 10.19.2017
+## Update by Zander 10.15.2017
+#assigning conyers and PP (liberal) as 1 and 2 row index, Sensenbrenner and NRA as 3 and 4 row index (conservative)
+#the final output of this file is a list of matrices for the years in the dataset, each matrix is a multinomial matrix
+#Three matrices are column bound together in the order of "support", "oppose", "abstain". They are all binary (plus NAs).
+#The data to run this is contained in a zipped file that I have also shared. You need to adjust the filepaths.
+rm(list=ls())
 library(readr)
 library(dplyr)
 library(lubridate)
-
-#read in all of the bill positions
-pos114 <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/114positions.csv")
+setwd("/Users/alexanderfurnas/Projects/Maplight_ideal_points/")
+#read in all of the bill positions, cbp, votes etc.
+pos114 <- read_csv("114positions.csv")
 pos114 <- pos114 %>% select(-X1)
-pos_all <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/all_positions.csv")
+pos_all <- read_csv("all_positions.csv")
+#read in roll call votes
+rollcalls <- read_csv("Bill_Data/HSall_rollcalls.csv")
+votes <- read_csv("Bill_Data/HSall_votes.csv")
+#read in the congressional bill project to get topic codes
+cbp <- read_csv("bills93-114 2.csv")
 
 pos_all <- bind_rows(pos_all, pos114)
 
 dim(pos_all)
 
 
-#read in the congressional bill project to get topic codes
-cbp <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/bills93-114 2.csv")
 
 unique(cbp$BillType)
 unique(pos_all$prefix)
@@ -33,7 +41,7 @@ pos_all$prefix[pos_all$prefix == "SC"] <- "sconres"
 cbp_select <- cbp %>% select(BillID, BillNum, BillType, Chamber, Cong, IntrDate, Major)
 
 pos_all <- pos_all %>% left_join(cbp_select, c("number" = "BillNum", "prefix" = "BillType", "session" = "Cong"))
-
+sessions <- pos_all %>% select(BillID, session) %>% unique()
 
 #Create the edge matrix so that we can k-core (5) filter the bills
 edge_mat <- NA
@@ -87,9 +95,12 @@ pos_all_core_abst <- filter(pos_all_core_dat, !is.na(disposition))
 pos_all_core_abst
 
 
-#read in roll call votes
-rollcalls <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/Bill_Data/HSall_rollcalls.csv")
-votes <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/Bill_Data/HSall_votes.csv")
+#pull out anchoring units for identification
+
+pos_all_core_abst <- filter(pos_all_core_abst, orgname != "Planned Parenthood" | orgname != "National Rifle Association")
+
+
+
 
 #filter out earlier congresses
 rollcalls <- filter(rollcalls, congress > 108)
@@ -104,27 +115,28 @@ rollcalls <- dplyr::select(rollcalls, congress, chamber, rollnumber, BillID)
 votes <- votes %>% left_join(rollcalls)
 
 #follow previous procedure for assigning votes and assigning abstentions
-votes <- votes %>% select(BillID, icpsr, cast_code)
+votes <- votes %>% select(BillID, icpsr, cast_code, congress)
 votes <-  filter(votes, BillID %in% core_names) 
 votes$disposition[votes$cast_code == 1] <- "support"
 votes$disposition[votes$cast_code == 6] <- "oppose"
 votes$disposition[votes$cast_code == 7 | votes$cast_code == 9] <- "abstention"
 
-bill_major <- pos_all %>% dplyr::select(BillID, Major) %>% unique()
-votes <- votes %>% left_join(bill_major)
-
-MOC_catcounts <- votes %>% group_by(icpsr, Major) %>% summarise(bill_count = n()) %>% arrange(desc(bill_count))
-MOC_catcounts <- MOC_catcounts %>% filter(bill_count > 1, !is.na(Major))
-
-
-votes <- votes %>% left_join(MOC_catcounts)
-votes_abst <- filter(votes, !is.na(bill_count))
+# bill_major <- pos_all %>% dplyr::select(BillID, Major) %>% unique()
+# votes <- votes %>% left_join(bill_major)
+# 
+# MOC_catcounts <- votes %>% group_by(icpsr, Major) %>% summarise(bill_count = n()) %>% arrange(desc(bill_count))
+# MOC_catcounts <- MOC_catcounts %>% filter(bill_count > 1, !is.na(Major))
+# 
+# 
+# votes <- votes %>% left_join(MOC_catcounts)
+# votes_abst <- filter(votes, !is.na(bill_count))
 
 #bind the two together
-votes_abst <- votes_abst %>% select(-cast_code) %>% rename(orgname=icpsr)
-votes_abst$orgname <- as.character(votes_abst$orgname)
+votes <- votes %>% select(-cast_code) %>% rename(orgname=icpsr)
+votes$orgname <- as.character(votes$orgname)
 
-final_positions_edgelist <- bind_rows(pos_all_core_abst,votes_abst) 
+
+final_positions_edgelist <- bind_rows(pos_all_core_abst,votes) 
 
 #make the final vote variable
 final_positions_edgelist$vote <- NA
@@ -139,18 +151,61 @@ unanimous_bills <- filter(unanimous_bills, num_positions == abs(sum_positions))
 #keep only non-unaninimous bills
 final_positions_edgelist <- final_positions_edgelist %>% filter(!(BillID %in% unanimous_bills$BillID))
 
-final_positions_edgelist  <- final_positions_edgelist  %>% mutate(bill_id_index = as.numeric(as.factor(as.character(BillID))))
+anchor_orgs <- c("10713" ,"14657","Planned Parenthood","National Rifle Association")
 
-final_positions_edgelist  <- final_positions_edgelist  %>% mutate(org_index = as.numeric(as.factor(as.character(orgname))))
+anchors <- filter(final_positions_edgelist, orgname %in% anchor_orgs)
 
-#make the voting matrix for estimation
-est_mat <- NA
-est_mat <- final_positions_edgelist %>% dplyr::select(org_index,bill_id_index, vote)
-est_mat <- est_mat%>% filter(complete.cases(est_mat))
-est_mat <- as.matrix(est_mat)
-m1 <- matrix(NA, nrow = length(unique(final_positions_edgelist$org_index)), ncol = length(unique(final_positions_edgelist$bill_id_index)))
-m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
-print(dim(m1))
+final_positions_edgelist <- filter(final_positions_edgelist, !(orgname %in% anchor_orgs))
+
+
+final_positions_edgelist  <- final_positions_edgelist  %>% mutate(org_index = as.numeric(as.factor(as.character(orgname))) +4)
+
+#Give the right indices to the anchor sheet
+anchors <- left_join(anchors, unique(select(final_positions_edgelist, BillID, bill_id_index)))
+anchors$org_index <- NA
+
+#assigning conyers and PP (liberal) as 1 and 2 row index, Sensenbrenner and NRA as 3 and 4 row index (conservative)
+anchors$org_index[anchors$orgname == "10713" ] <- 1
+anchors$org_index[anchors$orgname == "Planned Parenthood"] <- 2
+anchors$org_index[anchors$orgname == "14657"] <- 3
+anchors$org_index[anchors$orgname == "National Rifle Association"] <- 4
+
+#add the anchors back in with their indices
+final_positions_edgelist <- bind_rows(final_positions_edgelist, anchors)
+
+final_positions_edgelist <- final_positions_edgelist %>% left_join(sessions) 
+
+session_edgelists <- split(final_positions_edgelist, as.factor(final_positions_edgelist$session))
+
+org_nums <- max(final_positions_edgelist$org_index)
+
+estimation_matrices <- vector("list", length = length(session_edgelists))
+for (i in (1:length(session_edgelists))){
+  edgelist <- session_edgelists[[i]]
+  #make the voting matrix for estimation
+  edgelist  <- edgelist  %>% mutate(bill_id_index = as.numeric(as.factor(as.character(BillID))))
+  est_mat <- NA
+  est_mat <- edgelist %>% dplyr::select(org_index,bill_id_index, vote)
+  est_mat <- est_mat%>% filter(complete.cases(est_mat))
+  est_mat <- as.matrix(est_mat)
+  m1 <- matrix(NA, nrow = org_nums, ncol = length(unique(edgelist$bill_id_index)))
+  m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
+  print(dim(m1))
+  
+  sup_mat <- m1 == 1
+  sup_mat <- sup_mat*1
+  
+  opp_mat <- m1 == -1
+  opp_mat <- opp_mat*1
+  
+  abs_mat <- m1 == 0
+  abs_mat <- abs_mat*1
+  
+  multinomial_mat <- cbind(sup_mat, opp_mat, abs_mat)
+  estimation_matrices[[i]] <- multinomial_mat
+}
+
+
 
 
 #write_csv(final_positions_edgelist, "/Users/alexanderfurnas/Projects/Maplight_ideal_points/all_positions_withabstention_andCong.csv")
