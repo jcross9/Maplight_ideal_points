@@ -25,6 +25,7 @@ __pycache__/
 *.mm
 *.csv
 *.json
+*.zip
 
 # C extensions
 *.so
