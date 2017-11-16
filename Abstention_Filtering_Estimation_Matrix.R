@@ -8,14 +8,14 @@ rm(list=ls())
 library(readr)
 library(dplyr)
 library(lubridate)
-setwd("/Users/alexanderfurnas/Projects/Maplight_ideal_points/")
+setwd("/Users/alexanderfurnas/Projects/Maplight_ideal_points/replication data")
 #read in all of the bill positions, cbp, votes etc.
 pos114 <- read_csv("114positions.csv")
 pos114 <- pos114 %>% select(-X1)
 pos_all <- read_csv("all_positions.csv")
 #read in roll call votes
-rollcalls <- read_csv("Bill_Data/HSall_rollcalls.csv")
-votes <- read_csv("Bill_Data/HSall_votes.csv")
+rollcalls <- read_csv("HSall_rollcalls.csv")
+votes <- read_csv("HSall_votes.csv")
 #read in the congressional bill project to get topic codes
 cbp <- read_csv("bills93-114 2.csv")
 
@@ -161,7 +161,7 @@ final_positions_edgelist <- filter(final_positions_edgelist, !(orgname %in% anch
 final_positions_edgelist  <- final_positions_edgelist  %>% mutate(org_index = as.numeric(as.factor(as.character(orgname))) +4)
 
 #Give the right indices to the anchor sheet
-anchors <- left_join(anchors, unique(select(final_positions_edgelist, BillID, bill_id_index)))
+anchors <- left_join(anchors, unique(dplyr::select(final_positions_edgelist, BillID, bill_id_index)))
 anchors$org_index <- NA
 
 #assigning conyers and PP (liberal) as 1 and 2 row index, Sensenbrenner and NRA as 3 and 4 row index (conservative)
@@ -190,10 +190,10 @@ for (i in (1:length(session_edgelists))){
   est_mat <- as.matrix(est_mat)
   m1 <- matrix(NA, nrow = org_nums, ncol = length(unique(edgelist$bill_id_index)))
   m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
-  print(dim(m1))
-  
+
   sup_mat <- m1 == 1
   sup_mat <- sup_mat*1
+  print(sum(sup_mat))
   
   opp_mat <- m1 == -1
   opp_mat <- opp_mat*1

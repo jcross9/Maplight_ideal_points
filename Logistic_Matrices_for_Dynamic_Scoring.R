@@ -45,6 +45,8 @@ cbp_select <- cbp %>% select(BillID, BillNum, BillType, Chamber, Cong, IntrDate,
 pos_all <- pos_all %>% left_join(cbp_select, c("number" = "BillNum", "prefix" = "BillType", "session" = "Cong"))
 sessions <- pos_all %>% select(BillID, session) %>% unique()
 
+pos_bills <- unique(pos_all$BillID)
+
 #Create the edge matrix so that we can k-core (5) filter the bills
 edge_mat <- NA
 edge_mat <- pos_all %>% dplyr::select(orgname,BillID)
