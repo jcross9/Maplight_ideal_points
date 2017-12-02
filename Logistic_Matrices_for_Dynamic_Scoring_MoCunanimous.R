@@ -90,7 +90,6 @@ pos_all_core_dat <- select(pos_all_core, BillID, orgname, disposition)
 
 library(tibble)
 pos_all_core_dat <- as_tibble(pos_all_core_dat)
-unanimous_IG <- group_by(pos_all_core_dat, BillID) %>% summarise(unique_pos = length(unique(disposition))) %>% filter(unique_pos == 1)
 # 
 # #assign absention to all dyads where there is not a currently recorded position of yes or no, but there is a bill count indicator
 # pos_all_core_dat$disposition[is.na(pos_all_core_dat$disposition) & !is.na(pos_all_core_dat$bill_count)] <- "abstention"
@@ -99,11 +98,7 @@ unanimous_IG <- group_by(pos_all_core_dat, BillID) %>% summarise(unique_pos = le
 # pos_all_core_abst <- filter(pos_all_core_dat, !is.na(disposition))
 # 
 # pos_all_core_abst
-# 
-
-#pull out anchoring units for identification
-
-
+#
 
 #filter out earlier congresses
 rollcalls <- filter(rollcalls, congress > 108)
@@ -122,6 +117,9 @@ votes <- votes %>% select(BillID, icpsr, cast_code, congress)
 votes <-  filter(votes, BillID %in% core_names) 
 votes$disposition[votes$cast_code == 1] <- "support"
 votes$disposition[votes$cast_code == 6] <- "oppose"
+votes <- filter(votes, !is.na(disposition))
+unanimous_MoC <- group_by(votes, BillID) %>% summarise(unique_pos = length(unique(disposition))) %>% filter(unique_pos == 1)
+
 #votes$disposition[votes$cast_code == 7 | votes$cast_code == 9] <- "abstention"
 
 # bill_major <- pos_all %>% dplyr::select(BillID, Major) %>% unique()
@@ -150,7 +148,7 @@ final_positions_edgelist$vote[final_positions_edgelist$disposition == "oppose"] 
 
 
 #keep only non-unaninimous bills
-final_positions_edgelist <- final_positions_edgelist %>% filter(!(BillID %in% unanimous_IG$BillID))
+final_positions_edgelist <- final_positions_edgelist %>% filter(!(BillID %in% unanimous_MoC$BillID))
 
 anchor_orgs <- c("10713" ,"14657","Sierra Club","Americans for Tax Reform")
 
