@@ -12,16 +12,15 @@ library(dplyr)
 library(lubridate)
 setwd("/Users/alexanderfurnas/Projects/Maplight_ideal_points/replication data/")
 #read in all of the bill positions, cbp, votes etc.
-pos114 <- read_csv("114positions.csv")
-pos114 <- pos114 %>% select(-X1)
-pos_all <- read_csv("all_positions.csv")
+
+pos_all <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/replication data/all_positions_including114.csv")
 #read in roll call votes
 rollcalls <- read_csv("HSall_rollcalls.csv")
 votes <- read_csv("HSall_votes.csv")
 #read in the congressional bill project to get topic codes
 cbp <- read_csv("bills93-114 2.csv")
 
-pos_all <- bind_rows(pos_all, pos114)
+
 
 dim(pos_all)
 
@@ -143,7 +142,7 @@ final_positions_edgelist$congress[is.na(final_positions_edgelist$congress)] <- s
 #make the final vote variable
 final_positions_edgelist$vote <- NA
 final_positions_edgelist$vote[final_positions_edgelist$disposition == "support"] <- 1
-final_positions_edgelist$vote[final_positions_edgelist$disposition == "oppose"] <- -1
+final_positions_edgelist$vote[final_positions_edgelist$disposition == "oppose"] <- 0
 # final_positions_edgelist$vote[final_positions_edgelist$disposition == "abstention"] <- 0 
 
 #find bills that don't have unanimous position taking on them
