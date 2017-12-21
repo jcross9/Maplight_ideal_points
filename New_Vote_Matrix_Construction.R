@@ -39,26 +39,11 @@ pos_all$prefix[pos_all$prefix == "SC"] <- "sconres"
 cbp_select <- cbp %>% select(BillID, BillNum, BillType, Chamber, Cong, IntrDate, Major)
 
 pos_all <- pos_all %>% left_join(cbp_select, c("number" = "BillNum", "prefix" = "BillType", "session" = "Cong"))
-sessions <- pos_all %>% select(BillID, session) %>% unique()
-
-sessions
-
-pos_all_edges <- pos_all %>% select(orgname, BillID)
-pos_all_edges <- pos_all_edges %>% filter(complete.cases(pos_all_edges)) %>% as.matrix()
 
 
-library(igraph)
-est_g <- graph_from_edgelist(pos_all_edges, directed = FALSE)
 
-
-V(est_g)$core <- coreness(est_g)
-core5 <- induced_subgraph(est_g,V(est_g)$core>4)
-#extract ids of the bills and orgs to keep
-core_names <- V(core5)$name
-
-pos_all_edges_core <- as_tibble(pos_all) %>% filter(BillID %in% core_names) %>% filter(orgname %in% core_names)
-
-pos_all_core_dat <- select(pos_all_edges_core, BillID, orgname, disposition)
+pos_all_edges <- pos_all %>% select(orgname, BillID, disposition)
+pos_all_edges <- pos_all_edges %>% filter(complete.cases(pos_all_edges)) 
 
 
 rollcalls <- filter(rollcalls, congress > 108 & (grepl("passage", vote_desc) | grepl("Passage", vote_question)))
@@ -75,28 +60,51 @@ rollcalls$bill_num <- gsub("[^0-9]", "", rollcalls$bill_number)
 rollcalls$BillID <- paste(rollcalls$congress, rollcalls$bill_type, rollcalls$bill_num, sep ="-")
 rollcalls <- dplyr::select(rollcalls, congress, chamber, rollnumber, BillID, date)
 
-rollcalls <- rollcalls %>% filter(BillID %in% core_names)
-
- last_rolls <- rollcalls %>% group_by(BillID) %>% summarise(lastrolldate = max(date))
+last_rolls <- rollcalls %>% group_by(BillID) %>% summarise(lastrolldate = max(date))
  
- rollcalls <- rollcalls %>% left_join(last_rolls)
- rollcalls <- rollcalls %>% filter(date == lastrolldate)
+rollcalls <- rollcalls %>% left_join(last_rolls)
+rollcalls <- rollcalls %>% filter(date == lastrolldate)
 
 rollcalls <- rollcalls %>% left_join(votes)
 
 
 rollcalls_pos <- rollcalls %>% select(BillID, icpsr, disposition) %>% rename(orgname = icpsr)
 rollcalls_pos$orgname <- as.character(rollcalls_pos$orgname)
-combined_pos <- bind_rows(pos_all_core_dat, rollcalls_pos)
+
+combined_pos <- bind_rows(pos_all_edges, rollcalls_pos)
 
 unanimous_votes <- combined_pos %>% group_by(BillID) %>% summarise(num_votes = n(), num_support = sum(disposition == "support"), num_oppose = sum(disposition == "oppose"))
 unanimous_votes <- unanimous_votes %>% filter(num_votes == num_support | num_votes == num_oppose)
-combined_pos <- combined_pos %>% filter(!(BillID %in% unanimous_votes$BillID))
+combined_pos <- combined_pos %>% filter(!(BillID %in% unanimous_votes$BillID))  %>% unique()
+
+g_mat <- matrix(0,nrow = length(unique(combined_pos$orgname)), ncol = length(unique(combined_pos$BillID)), dimnames = list(unique(combined_pos$orgname), unique(combined_pos$BillID)))
+
+
+for (i in 1:nrow(combined_pos)){
+  row_org <- combined_pos$orgname[i]
+  col_bill <- combined_pos$BillID[i]
+  g_mat[row_org , col_bill] <- 1
+}
+
+library(igraph)
+est_g <- graph_from_incidence_matrix(g_mat)
+
+V(est_g)$core <- coreness(est_g)
+core5 <- induced_subgraph(est_g,V(est_g)$core>4)
+#extract ids of the bills and orgs to keep
+core_names <- V(core5)$name
+
+
+pos_all_edges_core <- as_tibble(combined_pos) %>% filter(BillID %in% core_names) %>% filter(orgname %in% core_names)
+
+pos_all_core_dat <- select(pos_all_edges_core, BillID, orgname, disposition)
+
+
 
 anchor_orgs <- c("10713" ,"14657","Sierra Club","Americans for Tax Reform")
-non_anchors <- filter(combined_pos, !(orgname %in% anchor_orgs))
+non_anchors <- filter(pos_all_core_dat, !(orgname %in% anchor_orgs))
 
-anchor_pos <- filter(combined_pos, orgname %in% anchor_orgs)
+anchor_pos <- filter(pos_all_core_dat, orgname %in% anchor_orgs)
 
 non_anchors$org_index <- as.numeric(as.factor(non_anchors$orgname)) + 4
 non_anchors$bill_index <- as.numeric(as.factor(non_anchors$BillID))

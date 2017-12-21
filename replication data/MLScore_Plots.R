@@ -9,7 +9,7 @@ nominate <- dplyr::select(nominate, icpsr, dim1, party_code, congress, chamber) 
 nominate$icpsr <- as.character(nominate$icpsr)
 IGs <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/replication data/dynamicscores_IG_MC_11-6.csv")
 IGs$org_index <- as.character(IGs$org_index)
-IGscores <- read_csv("/Users/alexanderfurnas/Projects/Maplight_ideal_points/replication data/dynamic_scores_MCMCpack.csv")
+IGscores <- read_csv("/Users/alexanderfurnas/Downloads/new_matrix_scores12.20.csv")
 IGscores <- IGscores[1:16296,]
 
 IGscores <- separate(IGscores, X1, c("theta", "org_index", "time"),sep="[.]") %>% dplyr::select(-theta)
