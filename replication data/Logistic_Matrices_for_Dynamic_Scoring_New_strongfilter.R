@@ -90,88 +90,88 @@ library(igraph)
 est_g <- graph_from_incidence_matrix(g_mat)
 
 V(est_g)$core <- coreness(est_g)
-core5 <- induced_subgraph(est_g,V(est_g)$core>4)
+core5 <- induced_subgraph(est_g,V(est_g)$core>2)
 #extract ids of the bills and orgs to keep
 core_names <- V(core5)$name
 
 
-pos_all_edges_core <- as_tibble(combined_pos) %>% filter(BillID %in% core_names) %>% filter(orgname %in% core_names)
+combined_pos <- as_tibble(combined_pos) %>% filter(BillID %in% core_names) %>% filter(orgname %in% core_names)
 
-pos_all_core_dat <- select(pos_all_edges_core, BillID, orgname, disposition)
+#pos_all_core_dat <- select(pos_all_edges_core, BillID, orgname, disposition)
 
 
 anchor_orgs <- c("10713" ,"14657","Sierra Club","Americans for Tax Reform")
-non_anchors <- filter(pos_all_core_dat, !(orgname %in% anchor_orgs))
+non_anchors <- filter(combined_pos, !(orgname %in% anchor_orgs))
 
-anchor_pos <- filter(pos_all_core_dat, orgname %in% anchor_orgs)
+anchor_pos <- filter(combined_pos, orgname %in% anchor_orgs)
 
 non_anchors$org_index <- as.numeric(as.factor(non_anchors$orgname)) + 4
-non_anchors$bill_index <- as.numeric(as.factor(non_anchors$BillID))
 
 anchor_pos$org_index[anchor_pos$orgname == "10713" ] <- 1
 anchor_pos$org_index[anchor_pos$orgname == "Sierra Club"] <- 2
 anchor_pos$org_index[anchor_pos$orgname == "14657"] <- 3
 anchor_pos$org_index[anchor_pos$orgname == "Americans for Tax Reform"] <- 4
 
-anchor_pos <- anchor_pos %>% left_join(select(non_anchors, BillID, bill_index)) %>% unique()
+anchor_pos <- anchor_pos %>% left_join(select(non_anchors, BillID)) %>% unique()
+
+combined_pos  <- bind_rows(anchor_pos, non_anchors)
+
+num_orgs <- max(combined_pos$org_index)
+
+org_names <- unique(combined_pos$orgname)
+
+
+library(tidyr)
+sessions <- combined_pos %>% mutate(bill_info = BillID) %>% separate(bill_info, c("session", "bill_type", "bill_num") , sep = "-") %>% select(-bill_type, -bill_num) %>% filter(session < 115)
+session_edgelists <- split(sessions, as.factor(sessions$session))
+
+estimation_matrices <- vector("list", length = length(session_edgelists))
+for (i in 2:length(session_edgelists)){
+combined_pos <- session_edgelists[[i]]
+g_mat <- matrix(0,nrow = length(unique(combined_pos$orgname)), ncol = length(unique(combined_pos$BillID)), dimnames = list(unique(combined_pos$orgname), unique(combined_pos$BillID)))
+
+
+for (j in 1:nrow(combined_pos)){
+  row_org <- combined_pos$orgname[j]
+  col_bill <- combined_pos$BillID[j]
+  g_mat[row_org , col_bill] <- 1
+}
+
+library(igraph)
+est_g <- graph_from_incidence_matrix(g_mat)
+
+V(est_g)$core <- coreness(est_g)
+core5 <- induced_subgraph(est_g,V(est_g)$core>2)
+#extract ids of the bills and orgs to keep
+core_names <- V(core5)$name
+
+
+pos_all_edges_core <- as_tibble(combined_pos) %>% filter(BillID %in% core_names) %>% filter(orgname %in% core_names)
+
+
+pos_all_edges_core$bill_index <- as.numeric(as.factor(pos_all_edges_core$BillID))
 
 library(tidyr)
 
-final_positions_edgelist  <- bind_rows(anchor_pos, non_anchors)
-sessions <- final_positions_edgelist %>% separate(BillID, c("session", "bill_type", "bill_num") , sep = "-") %>% select(session, bill_index) %>% unique()
 
-
-final_positions_edgelist <- final_positions_edgelist %>% select( org_index, bill_index, disposition)
+final_positions_edgelist <- pos_all_edges_core %>% select( org_index, bill_index, disposition)
 final_positions_edgelist$vote <- NA
 final_positions_edgelist$vote[final_positions_edgelist$disposition == "support"] <- 1
 final_positions_edgelist$vote[final_positions_edgelist$disposition == "oppose"] <- 0
 
 final_positions_edgelist <- final_positions_edgelist %>% select(-disposition)
 
-final_positions_edgelist <- final_positions_edgelist %>% left_join(sessions)
-
-
 est_mat <- NA
 est_mat <- final_positions_edgelist %>% dplyr::select(org_index,bill_index, vote)
 est_mat <- est_mat%>% filter(complete.cases(est_mat))
 est_mat <- as.matrix(est_mat)
-m1 <- matrix(NA, nrow = length(unique(final_positions_edgelist$org_index)), ncol = length(unique(final_positions_edgelist$bill_index)))
+m1 <- matrix(NA, nrow = num_orgs, ncol = length(unique(final_positions_edgelist$bill_index)))
 m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 print(dim(m1))
 
-
-sess_109 <- filter(sessions, session == 109)$bill_index
-m109 <- m1[,sess_109]
-dim(m109)
-
-na_sums <- rowSums(is.na(m1))
-num_cols <- ncol(m1)
-missing <- as_tibble(cbind(na_sums, num_cols)) %>% mutate(filled = num_cols - na_sums)
-
-
-sess_110 <- filter(sessions, session == 110)$bill_index
-m110 <- m1[,sess_110]
-dim(m110)
-
-sess_111 <- filter(sessions, session == 111)$bill_index
-m111 <- m1[,sess_111]
-dim(m111)
-
-sess_112 <- filter(sessions, session == 112)$bill_index
-m112 <- m1[,sess_112]
-dim(m112)
-
-
-sess_113 <- filter(sessions, session == 113)$bill_index
-m113 <- m1[,sess_113]
-dim(m113)
-
-
-sess_114 <- filter(sessions, session == 114)$bill_index
-m114 <- m1[,sess_114 ]
-dim(m114)
-
-View(m114)
+print(i)
+estimation_matrices[[i]] <- m1
+}
 
 
 # 
@@ -191,8 +191,6 @@ View(m114)
 #   m1 <- matrix(NA, nrow = org_nums, ncol = length(unique(edgelist$bill_id_index)))
 #   m1[est_mat[,1:2] ]<- as.numeric(est_mat[,3])
 #   print(dim(m1))
-#   
-#   
 #   estimation_matrices[[i]] <- m1
 # }
 # 
