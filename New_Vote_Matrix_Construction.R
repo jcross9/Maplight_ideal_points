@@ -36,17 +36,19 @@ pos_all$prefix[pos_all$prefix == "SJ"] <- "sjres"
 pos_all$prefix[pos_all$prefix == "HJ"] <- "hjres"
 pos_all$prefix[pos_all$prefix == "SC"] <- "sconres"
 
-cbp_select <- cbp %>% select(BillID, BillNum, BillType, Chamber, Cong, IntrDate, Major)
+cbp_select <- cbp %>% dplyr::select(BillID, BillNum, BillType, Chamber, Cong, IntrDate, Major)
 
 pos_all <- pos_all %>% left_join(cbp_select, c("number" = "BillNum", "prefix" = "BillType", "session" = "Cong"))
 
 
 
-pos_all_edges <- pos_all %>% select(orgname, BillID, disposition)
+pos_all_edges <- pos_all %>% dplyr::select(orgname, BillID, disposition)
 pos_all_edges <- pos_all_edges %>% filter(complete.cases(pos_all_edges)) 
 
 
-rollcalls <- filter(rollcalls, congress > 108 & (grepl("passage", vote_desc) | grepl("Passage", vote_question)))
+rollcalls <- filter(rollcalls, congress > 108)
+
+#& (grepl("passage", vote_desc) | grepl("Passage", vote_question)))
 votes <- filter(votes, congress > 108)
 
 votes$disposition <- NA
@@ -65,10 +67,22 @@ last_rolls <- rollcalls %>% group_by(BillID) %>% summarise(lastrolldate = max(da
 rollcalls <- rollcalls %>% left_join(last_rolls)
 rollcalls <- rollcalls %>% filter(date == lastrolldate)
 
+
+rollcalls <- rollcalls %>% filter(BillID %in% unique(pos_all_edges$BillID))
+
+
+final_rollnum <- rollcalls %>% group_by(BillID) %>% summarise(last_rollnum = max(rollnumber))
+
+rollcalls <- rollcalls %>% left_join(final_rollnum)
+rollcalls <- rollcalls %>% filter(rollnumber == last_rollnum)
+
 rollcalls <- rollcalls %>% left_join(votes)
 
 
-rollcalls_pos <- rollcalls %>% select(BillID, icpsr, disposition) %>% rename(orgname = icpsr)
+
+
+
+rollcalls_pos <- rollcalls %>% dplyr::select(BillID, icpsr, disposition) %>% rename(orgname = icpsr)
 rollcalls_pos$orgname <- as.character(rollcalls_pos$orgname)
 
 combined_pos <- bind_rows(pos_all_edges, rollcalls_pos)
@@ -97,7 +111,7 @@ core_names <- V(core5)$name
 
 pos_all_edges_core <- as_tibble(combined_pos) %>% filter(BillID %in% core_names) %>% filter(orgname %in% core_names)
 
-pos_all_core_dat <- select(pos_all_edges_core, BillID, orgname, disposition)
+pos_all_core_dat <- dplyr::select(pos_all_edges_core, BillID, orgname, disposition)
 
 
 
@@ -114,14 +128,14 @@ anchor_pos$org_index[anchor_pos$orgname == "Sierra Club"] <- 2
 anchor_pos$org_index[anchor_pos$orgname == "14657"] <- 3
 anchor_pos$org_index[anchor_pos$orgname == "Americans for Tax Reform"] <- 4
 
-anchor_pos <- anchor_pos %>% left_join(select(non_anchors, BillID, bill_index)) %>% unique()
+anchor_pos <- anchor_pos %>% left_join(dplyr::select(non_anchors, BillID, bill_index)) %>% unique()
 
-final_positions_edgelist <- bind_rows(select(anchor_pos, org_index, bill_index, disposition), select(non_anchors, org_index, bill_index, disposition))
+final_positions_edgelist <- bind_rows(dplyr::select(anchor_pos, org_index, bill_index, disposition), dplyr::select(non_anchors, org_index, bill_index, disposition))
 final_positions_edgelist$vote <- NA
 final_positions_edgelist$vote[final_positions_edgelist$disposition == "support"] <- 1
 final_positions_edgelist$vote[final_positions_edgelist$disposition == "oppose"] <- 0
 
-final_positions_edgelist <- final_positions_edgelist %>% select(-disposition)
+final_positions_edgelist <- final_positions_edgelist %>% dplyr::select(-disposition)
 
 est_mat <- NA
 est_mat <- final_positions_edgelist %>% dplyr::select(org_index,bill_index, vote)
